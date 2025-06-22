@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Shopping Cart - Mobile Shop</title>
+    <link rel="stylesheet" href="bootstrap/bootstrap-5.3.5-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .cart-item-image {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin-right: 15px;
+        }
+        .cart-quantity-input {
+            width: 70px;
+            text-align: center;
+        }
+        .cart-summary {
+            background-color: #f8f9fa;
+            border-radius: 0.5rem;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="index.html"> Mobile Shop</a>
+        <ul class="navbar-nav ms-auto">
+            <li class="nav-item"> <a class="nav-link" href="index.html">Home</a></li>
+            <li class="nav-item"> <a class="nav-link" href="product.html">Products</a></li>
+            <li class="nav-item"> <a class="nav-link" href="contact.html">Contact</a></li>
+            <li class="nav-item"> <a class="nav-link" href="login.php">Admin Login</a></li>
+            <li class="nav-item">
+                <a class="nav-link active" href="cart.html"> <i class="bi bi-cart"></i> Cart (<span id="cart-count">0</span>)
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container mt-5 mb-5">
+    <h1 class="text-center mb-4">Your Shopping Cart</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div id="cart-items-container">
+                <p class="text-center" id="cart-empty-message">Your cart is empty.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="cart-summary">
+                <h4>Order Summary</h4>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>Subtotal (<span id="summary-item-count">0</span> items)</span>
+                    <span>Rs.<span id="summary-subtotal">0</span></span>
+                </div>
+                <div class="d-flex justify-content-between mt-2">
+                    <span>Shipping</span>
+                    <span>Rs.0.00</span> </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <h5>Total</h5>
+                    <h5>Rs.<span id="summary-total">0</span></h5>
+                </div>
+                <button class="btn btn-primary btn-lg w-100 mt-4" id="checkout-button">Proceed to Checkout</button>
+                <a href="product.html" class="btn btn-outline-secondary w-100 mt-2">Continue Shopping</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="bg-dark text-white text-center py-3">
+    <p>&copy; 2025 Mobile Shop. All Rights Reserved.</p>
+</footer>
+
+<script src="bootstrap/bootstrap-5.3.5-dist/js/bootstrap.bundle.js"defer></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="products-data.js"defer></script> 
+<script src="cart-functions.js"defer></script> 
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const cartItemsContainer = document.getElementById('cart-items-container');
+        const cartEmptyMessage = document.getElementById('cart-empty-message');
+        const summaryItemCount = document.getElementById('summary-item-count');
+        const summarySubtotal = document.getElementById('summary-subtotal');
+        const summaryTotal = document.getElementById('summary-total');
+        const checkoutButton = document.getElementById('checkout-button');
+
+        function renderCart() {
+            const cart = getCartItems();
+            cartItemsContainer.innerHTML = ''; // Clear existing items
+
+            if (cart.length === 0) {
+                cartEmptyMessage.style.display = 'block'; // Show "Cart is empty"
+                checkoutButton.disabled = true; // Disable checkout button
+            } else {
+                cartEmptyMessage.style.display = 'none'; // Hide "Cart is empty"
+                checkoutButton.disabled = false; // Enable checkout button
+
+                let subtotal = 0;
+                let totalItems = 0;
+
+                cart.forEach(item => {
+                    const itemTotalPrice = item.price * item.quantity;
+                    subtotal += itemTotalPrice;
+                    totalItems += item.quantity;
+
+                    const cartItemHtml = `
+                        <div class="card mb-3">
+                            <div class="card-body d-flex align-items-center">
+                                <img src="${item.image}" class="cart-item-image rounded" alt="${item.name}">
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title mb-1">${item.name}</h5>
+                                    <p class="card-text text-muted mb-1">Rs.${item.price.toLocaleString()}</p>
+                                    <div class="d-flex align-items-center">
+                                        <label for="quantity-${item.id}" class="me-2">Quantity:</label>
+                                        <input type="number" id="quantity-${item.id}"
+                                               class="form-control cart-quantity-input"
+                                               value="${item.quantity}" min="1"
+                                               data-product-id="${item.id}">
+                                        <button class="btn btn-danger btn-sm ms-3 remove-item-btn" data-product-id="${item.id}">Remove</button>
+                                    </div>
+                                </div>
+                                <h5 class="ms-auto">Rs.${itemTotalPrice.toLocaleString()}</h5>
+                            </div>
+                        </div>
+                    `;
+                    cartItemsContainer.innerHTML += cartItemHtml;
+                });
+
+                // Update summary
+                summaryItemCount.innerText = totalItems;
+                summarySubtotal.innerText = subtotal.toLocaleString();
+                summaryTotal.innerText = subtotal.toLocaleString(); // Assuming no shipping for now
+
+                // Add event listeners for quantity change and remove buttons
+                document.querySelectorAll('.cart-quantity-input').forEach(input => {
+                    input.addEventListener('change', (event) => {
+                        const productId = event.target.dataset.productId;
+                        const newQuantity = parseInt(event.target.value);
+                        changeQuantity(productId, newQuantity);
+                        renderCart(); // Re-render cart to show updated totals
+                    });
+                });
+
+                document.querySelectorAll('.remove-item-btn').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const productId = event.target.dataset.productId;
+                        removeFromCart(productId);
+                        renderCart(); // Re-render cart after removal
+                    });
+                });
+            }
+        }
+
+        // Initial render of the cart when the page loads
+        renderCart();
+
+        // Optional: Add a simple alert for checkout (in a real app, this would go to a payment gateway)
+        checkoutButton.addEventListener('click', () => {
+            if (getCartItems().length > 0) {
+                alert('Proceeding to checkout! (This is a demo. No actual payment will be processed.)');
+                // In a real application, you would redirect to a checkout page or initiate payment process here.
+                localStorage.removeItem('shoppingCart'); // Clear cart after "checkout"
+                renderCart(); // Update display
+            } else {
+                alert('Your cart is empty. Please add items before checking out.');
+            }
+        });
+    });
+</script>
+</body>
+</html>

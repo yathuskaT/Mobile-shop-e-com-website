@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Products - Mobile Shop</title>
+    <link rel="stylesheet" href="bootstrap/bootstrap-5.3.5-dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="index.html">Mobile Shop</a>
+        <ul class="navbar-nav ms-auto">
+            <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+            <li class="nav-item"><a class="nav-link active" href="product.html">Products</a></li>
+            <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
+            <li class="nav-item"><a class="nav-link" href="login.php">Admin Login</a></li>
+            <li class="nav-item">
+                <a class="nav-link" href="cart.html">
+                    <i class="bi bi-cart"></i> Cart (<span id="cart-count">0</span>)
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+
+<div class="container mt-5 mb-5">
+    <h1 class="text-center mb-4">All Our Mobile Phones</h1>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search by name...">
+        </div>
+        <div class="col-md-3">
+            <select id="brandFilter" class="form-select">
+                <option value="">All Brands</option>
+                <option value="iPhone">iPhone</option>
+                <option value="Samsung">Samsung</option>
+                <option value="Xiaomi">Xiaomi</option>
+                <option value="Vivo">Vivo</option>
+                <option value="Huawei">Huawei</option>
+                </select>
+        </div>
+        <div class="col-md-3">
+            <select id="priceFilter" class="form-select">
+                <option value="">All Prices</option>
+                <option value="0-100000">Below Rs. 100,000</option>
+                <option value="100001-200000">Rs. 100,001 - 200,000</option>
+                <option value="200001-300000">Above Rs. 200,000</option>
+                </select>
+        </div>
+    </div>
+
+    <div class="row" id="product-list-container">
+        <div class="col-12 text-center" id="loading-products-message">
+            <p>Loading products...</p>
+        </div>
+        </div>
+</div>
+
+<footer class="bg-dark text-white text-center py-3">
+    <p>&copy; 2025 Mobile Shop. All Rights Reserved.</p>
+</footer>
+
+<script src="bootstrap/bootstrap-5.3.5-dist/js/bootstrap.bundle.js" defer></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="products-data.js" defer></script>
+<script src="cart-functions.js"defer></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const productListContainer = document.getElementById('product-list-container');
+        const searchInput = document.getElementById('searchInput');
+        const brandFilter = document.getElementById('brandFilter');
+        const priceFilter = document.getElementById('priceFilter');
+        const loadingMessage = document.getElementById('loading-products-message');
+
+        // Function to display products
+        function displayProducts(productsToDisplay) {
+            productListContainer.innerHTML = ''; // Clear previous products
+            if (productsToDisplay.length === 0) {
+                productListContainer.innerHTML = '<div class="col-12 text-center mt-5"><p>No products found matching your criteria.</p></div>';
+                return;
+            }
+
+            productsToDisplay.forEach(product => {
+                const productCardHtml = `
+                    <div class="col-md-4 mb-4">
+                        <div class="card">
+                            <img src="${product.image}" class="card-img-top product-img" alt="${product.name}">
+                            <div class="card-body">
+                                <h5 class="card-title">${product.name}</h5>
+                                <p class="card-text">Rs.${product.price.toLocaleString()}</p>
+                                <a href="product-details.html?id=${product.id}" class="btn btn-outline-primary">View Details</a>
+                                <button class="btn btn-success mt-2 add-to-cart-btn" data-product-id="${product.id}">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                productListContainer.innerHTML += productCardHtml;
+            });
+            // No need to call addCartListeners() here due to event delegation
+        }
+
+        // Event Delegation for "Add to Cart" buttons
+        // This listener is on the parent container and will catch clicks on dynamically added buttons
+        productListContainer.addEventListener('click', (event) => {
+            const clickedButton = event.target.closest('.add-to-cart-btn');
+            if (clickedButton) {
+                const productId = clickedButton.dataset.productId;
+                addToCart(productId); // Call the addToCart function from cart-functions.js
+            }
+        });
+
+        // Function to apply filters and search
+        function applyFiltersAndSearch() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const selectedBrand = brandFilter.value;
+            const selectedPriceRange = priceFilter.value;
+
+            const filteredProducts = allProducts.filter(product => {
+                // 1. Search Filter (by name)
+                const matchesSearch = product.name.toLowerCase().includes(searchTerm);
+
+                // 2. Brand Filter
+                const matchesBrand = selectedBrand === "" || product.brand === selectedBrand;
+
+                // 3. Price Filter
+                const matchesPrice = (() => {
+                    if (selectedPriceRange === "") return true; // No price filter selected
+
+                    const [minStr, maxStr] = selectedPriceRange.split('-');
+                    const minPrice = parseInt(minStr);
+                    // Check if maxStr exists and is a valid number, otherwise treat as "above"
+                    const maxPrice = maxStr ? parseInt(maxStr) : Infinity; 
+
+                    return product.price >= minPrice && product.price <= maxPrice;
+                })();
+
+                return matchesSearch && matchesBrand && matchesPrice;
+            });
+
+            displayProducts(filteredProducts);
+        }
+
+        // Initial display of all products on page load
+        if (loadingMessage) {
+            loadingMessage.remove(); // Remove loading message once products are ready
+        }
+        displayProducts(allProducts);
+
+        // Add event listeners to input and select elements for real-time filtering/searching
+        searchInput.addEventListener('keyup', applyFiltersAndSearch);
+        brandFilter.addEventListener('change', applyFiltersAndSearch);
+        priceFilter.addEventListener('change', applyFiltersAndSearch);
+    });
+</script>
+</body>
+</html>
